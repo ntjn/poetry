@@ -1,2 +1,3 @@
-* Usage of foreing function interface to link C functions into Haskell
-* Linking Haskell functions into C
+# Usage of FFI inside Haskell
+
+Examples showcasing linking C functions with Haskell code and vice versa.
