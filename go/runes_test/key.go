@@ -173,17 +173,19 @@ var (
 )
 
 type Key struct {
-	KeyEvent *tcell.EventKey
+    KeyEvent *tcell.EventKey
     KeyLiteral string `yaml:"key"`
-	Description string `yaml:"description"`
-	Command string `yaml:"command"`
+    Description string `yaml:"description"`
+    Command string `yaml:"command"`
 }
 
-type KeyGroup struct {
-    Keys map[string]Key `yaml:"bindings"`
+type KeyGroup []Key
+
+type Bindings struct {
+    KeyGroups map[string]KeyGroup `yaml:"bindings"`
 }
 
-func (kg *KeyGroup) Load() error {
+func (kg *Bindings) Load() error {
     f, err := ioutil.ReadFile(K9sBindingPath)
     if err != nil {
         return err
@@ -233,8 +235,28 @@ func (k *Key) Parse() {
 }
 
 func (kg *KeyGroup) Parse() {
-    for k, v := range kg.Keys {
+    for i := 0; i < len(*kg);  i++ {
+        v := (*kg)[i]
         v.Parse()
-        kg.Keys[k] = v
+        (*kg)[i] = v
     }
+}
+
+func (b *Bindings) Parse() {
+    for k, v := range b.KeyGroups {
+        v.Parse()
+        b.KeyGroups[k] = v
+    }
+}
+
+func (b *Bindings) GetConfiguredKeys() map[string]Key {
+    keys := map[string]Key{}
+
+    for _, v := range b.KeyGroups {
+        for i := 0; i < len(v); i++ {
+            keys[v[i].KeyEvent.Name()] = v[i]
+        }
+    }
+
+    return keys
 }

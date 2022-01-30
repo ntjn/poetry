@@ -7,54 +7,55 @@ import (
     "fmt"
     "os"
     "time"
-	"log"
-	"github.com/mattn/go-runewidth"
+    "log"
+    "github.com/mattn/go-runewidth"
     "github.com/gdamore/tcell/v2"
     "github.com/gdamore/tcell/v2/encoding"
 )
 
 func emitStr(s tcell.Screen, x, y int, style tcell.Style, str string) {
-	for _, c := range str {
-		var comb []rune
-		w := runewidth.RuneWidth(c)
-		if w == 0 {
-			comb = []rune{c}
-			c = ' '
-			w = 1
-		}
-		s.SetContent(x, y, c, comb, style)
-		x += w
-	}
+    for _, c := range str {
+        var comb []rune
+        w := runewidth.RuneWidth(c)
+        if w == 0 {
+            comb = []rune{c}
+            c = ' '
+            w = 1
+        }
+        s.SetContent(x, y, c, comb, style)
+        x += w
+    }
 }
 
 // TODO: Move this to a unittest
 // TODO: Make this less spaghetti
 func testKeyLoad() {
-	file, err := os.OpenFile("test.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+    file, err := os.OpenFile("test.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
     if err != nil {
         log.Fatal(err)
     }
-	log.SetOutput(file)
+    log.SetOutput(file)
 
-    kg := new(KeyGroup)
+    kg := new(Bindings)
     err = kg.Load()
-	if err != nil {
-		log.Printf("Error: %s\n", err)
-	} else {
-		log.Printf("The loaded config contains: \n%s\n", kg)
-		k := kg.Keys["sofun"]
-		(&k).Parse()
-		kg.Keys["sofun"] = k
-		log.Printf("\nKey: %s\nRune: %s\nModifiers: %s\nName: %s\n",
-			k.KeyEvent.Key(), k.KeyEvent.Rune(), k.KeyEvent.Modifiers(), k.KeyEvent.Name())
-	}
+    if err != nil {
+        log.Printf("Error: %s\n", err)
+    } else {
+        log.Printf("The loaded config contains: \n%s\n", kg)
+        /*
+        kg.Parse()
+        kg.Keys["sofun"] = k
+        log.Printf("\nKey: %s\nRune: %s\nModifiers: %s\nName: %s\n",
+        k.KeyEvent.Key(), k.KeyEvent.Rune(), k.KeyEvent.Modifiers(), k.KeyEvent.Name())
+        */
+    }
 }
 
 func showKeyEvent(x int, y int, screen tcell.Screen, style tcell.Style, ev *tcell.EventKey) {
-	emitStr(screen, x, y, style, fmt.Sprintf("Key: %s", ev.Key()))
-	emitStr(screen, x, y+1, style, fmt.Sprintf("Rune: %s", ev.Rune()))
-	emitStr(screen, x, y+2, style, fmt.Sprintf("Modifiers: %s", ev.Modifiers()))
-	emitStr(screen, x, y+3, style, fmt.Sprintf("Name: %s", ev.Name()))
+    emitStr(screen, x, y, style, fmt.Sprintf("Key: %s", ev.Key()))
+    emitStr(screen, x, y+1, style, fmt.Sprintf("Rune: %s", ev.Rune()))
+    emitStr(screen, x, y+2, style, fmt.Sprintf("Modifiers: %s", ev.Modifiers()))
+    emitStr(screen, x, y+3, style, fmt.Sprintf("Name: %s", ev.Name()))
 }
 
 func showHelp(x int, y int, screen tcell.Screen, style tcell.Style) {
@@ -64,14 +65,22 @@ func showHelp(x int, y int, screen tcell.Screen, style tcell.Style) {
         "Esc: Exit",
     }
 
-	emitStr(screen, x, y, style, "Help:")
+    emitStr(screen, x, y, style, "Help:")
     for i := 0; i < 3; i++ {
-	    emitStr(screen, x+4, y+1+i, style, help[i])
+        emitStr(screen, x+4, y+1+i, style, help[i])
     }
 }
 
-func showBindings(kg *KeyGroup, screen tcell.Screen, style tcell.Style) {
-	emitStr(screen, 5, 13, style, fmt.Sprintf("%s", kg))
+func showBindings(b *Bindings, screen tcell.Screen, style tcell.Style) {
+    cLine := 13
+    for k, v := range b.KeyGroups {
+        emitStr(screen, 5, cLine, style, fmt.Sprintf("Key group: %s", k))
+        cLine++
+        for i := 0; i < len(v); i++ {
+            emitStr(screen, 9, cLine, style, fmt.Sprintf("%s", v[i]))
+            cLine++
+        }
+    }
 }
 
 func main() {
@@ -93,18 +102,18 @@ func main() {
     s.EnableMouse()
     s.EnablePaste()
 
-	testKeyLoad()
+    testKeyLoad()
 
-	kg := new(KeyGroup)
-    err := kg.Load()
-	if err != nil {
-		log.Printf("Error: %s\n", err)
-	}
-	kg.Parse()
+    bindings := new(Bindings)
+    err := bindings.Load()
+    if err != nil {
+        log.Printf("Error: %s\n", err)
+    }
+    bindings.Parse()
+    bindingsShown := false
+    configuredKeys := bindings.GetConfiguredKeys()
 
-	bindingsShown := false
-
-	s.Show()
+    s.Show()
 
     events := make(chan tcell.Event)
 
@@ -124,17 +133,22 @@ func main() {
                     if ev.Key() == tcell.KeyEscape {
                         s.Fini()
                         os.Exit(0)
-                    } else {
-						showKeyEvent(5, 3, s, defStyle, ev)
                     }
 
-					if ev.Rune() == 'b' {
+                    if _, ok := configuredKeys[ev.Name()]; ok {
+                        emitStr(s, 5, 1, defStyle, fmt.Sprintf("Bingo! That's a(n) %s.", ev.Name()))
+                    }
+
+                    showKeyEvent(5, 3, s, defStyle, ev)
+
+                    if ev.Rune() == 'b' {
                         bindingsShown = !bindingsShown
                     }
             }
             if bindingsShown {
-                showBindings(kg, s, defStyle)
+                showBindings(bindings, s, defStyle)
             }
+
             s.Sync()
             s.Show()
         }
