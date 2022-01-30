@@ -1,7 +1,7 @@
 bindings:
   pSamples:
     - key: "p"
-      description: "A p."
+      description: "A p"
       command: "Nothing"
     - key: "Ctrl+P"
       description: ""
