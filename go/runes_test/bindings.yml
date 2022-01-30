@@ -1,0 +1,19 @@
+bindings:
+  pSamples:
+    - key: "p"
+      description: "A p."
+      command: "Nothing"
+    - key: "Ctrl+P"
+      description: ""
+      command: "Nothing"
+  ßSamples:
+    - key: "ß"
+      description: "A scharfes S"
+      command: "Nothing"
+    - key: "Alt+ẞ"
+      description: "Alt + capital scharfes S"
+      command: "Nothing"
+  Up:
+    - key: "Up"
+      description: "Up arrow"
+      command: "Nothing"

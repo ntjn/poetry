@@ -8,7 +8,7 @@ import (
 )
 
 var (
-    K9sBindingPath = "/home/ntj/.config/k9s/bindings.yml"
+    K9sBindingPath = "./bindings.yml"
 )
 
 // Maps from key literals to tcell.Key enums.
